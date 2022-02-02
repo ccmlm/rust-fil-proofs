@@ -6,6 +6,7 @@
 
 #[cfg(feature = "blake2s")]
 pub mod blake2s;
+pub mod halo;
 #[cfg(feature = "poseidon")]
 pub mod poseidon;
 #[cfg(feature = "poseidon")]
