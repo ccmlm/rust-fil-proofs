@@ -6,12 +6,11 @@ use bellperson::{
     ConstraintSystem, SynthesisError,
 };
 use blstrs::Scalar as Fr;
-use ff::PrimeField;
 use merkletree::{
     hash::{Algorithm, Hashable},
     merkle::Element,
 };
-use pasta_curves::{arithmetic::FieldExt, Fp, Fq};
+use pasta_curves::arithmetic::FieldExt;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
@@ -56,6 +55,8 @@ impl<F: FieldExt> Into<Fr> for Sha256Domain<F> {
     }
 }
 
+// TODO (jake): decide if this is needed?
+/*
 impl From<Fp> for Sha256Domain<Fp> {
     fn from(fp: Fp) -> Self {
         Sha256Domain {
@@ -73,6 +74,7 @@ impl From<Fq> for Sha256Domain<Fq> {
         }
     }
 }
+*/
 
 impl<F: FieldExt> From<[u8; 32]> for Sha256Domain<F> {
     fn from(bytes: [u8; 32]) -> Self {
@@ -139,11 +141,7 @@ impl<F: FieldExt> Element for Sha256Domain<F> {
     }
 }
 
-impl<F> Domain for Sha256Domain<F> 
-where
-    F: FieldExt,
-    Self: From<F>,
-{
+impl<F: FieldExt> Domain for Sha256Domain<F> {
     fn into_bytes(&self) -> Vec<u8> {
         self.inner.into_bytes()
     }
@@ -158,7 +156,13 @@ where
 
     fn random<R: RngCore>(rng: &mut R) -> Self {
         // Generate a field element then convert to ensure that we stay within the field.
-        F::random(rng).into()
+        let mut bytes = [0u8; 32];
+        // Panics if `F::Repr` is not 32 bytes.
+        bytes.copy_from_slice(F::random(rng).to_repr().as_ref());
+        Sha256Domain {
+            inner: groth::Sha256Domain(bytes),
+            _f: PhantomData,
+        }
     }
 }
 
@@ -220,11 +224,7 @@ impl<F: FieldExt> Algorithm<Sha256Domain<F>> for Sha256Function<F> {
     }
 }
 
-impl<F> HashFunction<Sha256Domain<F>> for Sha256Function<F>
-where
-    F: FieldExt,
-    Sha256Domain<F>: Domain,
-{
+impl<F: FieldExt> HashFunction<Sha256Domain<F>> for Sha256Function<F> {
     fn hash(data: &[u8]) -> Sha256Domain<F> {
         // Calling `.into()` is safe because the output of `.hash()` is guaranteed to be 254 bits.
         <groth::Sha256Function as HashFunction<groth::Sha256Domain>>::hash(data).into()
@@ -289,11 +289,7 @@ pub struct Sha256Hasher<F: FieldExt> {
     _f: PhantomData<F>,
 }
 
-impl<F> Hasher for Sha256Hasher<F>
-where
-    F: FieldExt,
-    Sha256Domain<F>: Domain,
-{
+impl<F: FieldExt> Hasher for Sha256Hasher<F> {
     type Domain = Sha256Domain<F>;
     type Function = Sha256Function<F>;
 
