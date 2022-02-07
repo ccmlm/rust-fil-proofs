@@ -256,11 +256,12 @@ mod tests {
     use super::*;
 
     use filecoin_hashers::{
-        blake2s::Blake2sHasher, poseidon::PoseidonHasher, sha256::Sha256Hasher,
+        blake2s::Blake2sHasher, halo, poseidon::PoseidonHasher, sha256::Sha256Hasher,
     };
     use generic_array::typenum::{U0, U2, U4, U8};
     use memmap::{MmapMut, MmapOptions};
     use merkletree::store::StoreConfig;
+    use pasta_curves::{Fp, Fq};
 
     use crate::merkle::{
         create_base_merkle_tree, DiskStore, MerkleProofTrait, MerkleTreeTrait, MerkleTreeWrapper,
@@ -359,6 +360,12 @@ mod tests {
         graph_bucket::<Blake2sHasher>();
     }
 
+    #[test]
+    fn graph_bucket_sha256_halo() {
+        graph_bucket::<halo::Sha256Hasher<Fp>>();
+        graph_bucket::<halo::Sha256Hasher<Fq>>();
+    }
+
     fn gen_proof<H: 'static + Hasher, U: 'static + PoseidonArity>(config: Option<StoreConfig>) {
         let leafs = 64;
         let porep_id = [1; 32];
@@ -395,6 +402,18 @@ mod tests {
     }
 
     #[test]
+    fn gen_proof_poseidon_binary_halo() {
+        gen_proof::<halo::PoseidonHasher<Fp>, U2>(None);
+        gen_proof::<halo::PoseidonHasher<Fq>, U2>(None);
+    }
+
+    #[test]
+    fn gen_proof_sha256_binary_halo() {
+        gen_proof::<halo::Sha256Hasher<Fp>, U2>(None);
+        gen_proof::<halo::Sha256Hasher<Fq>, U2>(None);
+    }
+
+    #[test]
     fn gen_proof_poseidon_quad() {
         gen_proof::<PoseidonHasher, U4>(None);
     }
@@ -410,7 +429,25 @@ mod tests {
     }
 
     #[test]
+    fn gen_proof_poseidon_quad_halo() {
+        gen_proof::<halo::PoseidonHasher<Fp>, U4>(None);
+        gen_proof::<halo::PoseidonHasher<Fq>, U4>(None);
+    }
+
+    #[test]
+    fn gen_proof_sha256_quad_halo() {
+        gen_proof::<halo::Sha256Hasher<Fp>, U4>(None);
+        gen_proof::<halo::Sha256Hasher<Fq>, U4>(None);
+    }
+
+    #[test]
     fn gen_proof_poseidon_oct() {
         gen_proof::<PoseidonHasher, U8>(None);
+    }
+
+    #[test]
+    fn gen_proof_poseidon_oct_halo() {
+        gen_proof::<halo::PoseidonHasher<Fp>, U8>(None);
+        gen_proof::<halo::PoseidonHasher<Fq>, U8>(None);
     }
 }
