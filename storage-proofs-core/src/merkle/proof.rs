@@ -700,9 +700,10 @@ mod tests {
     use super::*;
 
     use filecoin_hashers::{
-        blake2s::Blake2sHasher, poseidon::PoseidonHasher, sha256::Sha256Hasher, Domain,
+        blake2s::Blake2sHasher, halo, poseidon::PoseidonHasher, sha256::Sha256Hasher, Domain,
     };
     use generic_array::typenum::{U2, U4, U8};
+    use pasta_curves::{Fp, Fq};
     use rand::thread_rng;
 
     use crate::merkle::{
@@ -896,6 +897,226 @@ mod tests {
                 Blake2sHasher,
                 DiskStore<<Blake2sHasher as Hasher>::Domain>,
                 U8,
+                U4,
+                U2,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_poseidon_2_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fp>,
+                DiskStore<<halo::PoseidonHasher<Fp> as Hasher>::Domain>,
+                U2,
+                U0,
+                U0,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fq>,
+                DiskStore<<halo::PoseidonHasher<Fq> as Hasher>::Domain>,
+                U2,
+                U0,
+                U0,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_poseidon_4_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fp>,
+                DiskStore<<halo::PoseidonHasher<Fp> as Hasher>::Domain>,
+                U4,
+                U0,
+                U0,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fq>,
+                DiskStore<<halo::PoseidonHasher<Fq> as Hasher>::Domain>,
+                U4,
+                U0,
+                U0,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_poseidon_8_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fp>,
+                DiskStore<<halo::PoseidonHasher<Fp> as Hasher>::Domain>,
+                U8,
+                U0,
+                U0,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fq>,
+                DiskStore<<halo::PoseidonHasher<Fq> as Hasher>::Domain>,
+                U8,
+                U0,
+                U0,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_poseidon_8_2_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fp>,
+                DiskStore<<halo::PoseidonHasher<Fp> as Hasher>::Domain>,
+                U8,
+                U2,
+                U0,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fq>,
+                DiskStore<<halo::PoseidonHasher<Fq> as Hasher>::Domain>,
+                U8,
+                U2,
+                U0,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_poseidon_8_4_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fp>,
+                DiskStore<<halo::PoseidonHasher<Fp> as Hasher>::Domain>,
+                U8,
+                U4,
+                U0,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fq>,
+                DiskStore<<halo::PoseidonHasher<Fq> as Hasher>::Domain>,
+                U8,
+                U4,
+                U0,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_poseidon_8_4_2_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fp>,
+                DiskStore<<halo::PoseidonHasher<Fp> as Hasher>::Domain>,
+                U8,
+                U4,
+                U2,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::PoseidonHasher<Fq>,
+                DiskStore<<halo::PoseidonHasher<Fq> as Hasher>::Domain>,
+                U8,
+                U4,
+                U2,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_sha256_2_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::Sha256Hasher<Fp>,
+                DiskStore<<halo::Sha256Hasher<Fp> as Hasher>::Domain>,
+                U2,
+                U0,
+                U0,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::Sha256Hasher<Fq>,
+                DiskStore<<halo::Sha256Hasher<Fq> as Hasher>::Domain>,
+                U2,
+                U0,
+                U0,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_sha256_4_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::Sha256Hasher<Fp>,
+                DiskStore<<halo::Sha256Hasher<Fp> as Hasher>::Domain>,
+                U4,
+                U0,
+                U0,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::Sha256Hasher<Fq>,
+                DiskStore<<halo::Sha256Hasher<Fq> as Hasher>::Domain>,
+                U4,
+                U0,
+                U0,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_sha256_2_4_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::Sha256Hasher<Fp>,
+                DiskStore<<halo::Sha256Hasher<Fp> as Hasher>::Domain>,
+                U2,
+                U4,
+                U0,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::Sha256Hasher<Fq>,
+                DiskStore<<halo::Sha256Hasher<Fq> as Hasher>::Domain>,
+                U2,
+                U4,
+                U0,
+            >,
+        >();
+    }
+
+    #[test]
+    fn merklepath_sha256_top_2_4_2_halo() {
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::Sha256Hasher<Fp>,
+                DiskStore<<halo::Sha256Hasher<Fp> as Hasher>::Domain>,
+                U2,
+                U4,
+                U2,
+            >,
+        >();
+        merklepath::<
+            MerkleTreeWrapper<
+                halo::Sha256Hasher<Fq>,
+                DiskStore<<halo::Sha256Hasher<Fq> as Hasher>::Domain>,
+                U2,
                 U4,
                 U2,
             >,
