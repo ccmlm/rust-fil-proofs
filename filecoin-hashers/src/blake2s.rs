@@ -128,6 +128,8 @@ impl From<Blake2sDomain> for Fr {
 }
 
 impl Domain for Blake2sDomain {
+    type Field = Fr;
+
     fn into_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }

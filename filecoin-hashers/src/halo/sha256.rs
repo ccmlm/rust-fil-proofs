@@ -43,7 +43,7 @@ impl<F: FieldExt> Into<groth::Sha256Domain> for Sha256Domain<F> {
 // Pasta curves.
 impl<F: FieldExt> From<Fr> for Sha256Domain<F> {
     fn from(_fr: Fr) -> Self {
-        panic!("cannot convert BSL12-381 scalar to halo::Sha256Domain")
+        panic!("cannot convert BLS12-381 scalar to halo::Sha256Domain")
     }
 }
 
@@ -51,7 +51,7 @@ impl<F: FieldExt> From<Fr> for Sha256Domain<F> {
 #[allow(clippy::from_over_into)]
 impl<F: FieldExt> Into<Fr> for Sha256Domain<F> {
     fn into(self) -> Fr {
-        panic!("cannot convert halo::Sha256Domain into BSL12-381 scalar")
+        panic!("cannot convert halo::Sha256Domain into BLS12-381 scalar")
     }
 }
 
@@ -142,6 +142,8 @@ impl<F: FieldExt> Element for Sha256Domain<F> {
 }
 
 impl<F: FieldExt> Domain for Sha256Domain<F> {
+    type Field = F;
+
     fn into_bytes(&self) -> Vec<u8> {
         self.inner.into_bytes()
     }

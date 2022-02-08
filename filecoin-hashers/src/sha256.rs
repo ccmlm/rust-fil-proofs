@@ -93,6 +93,8 @@ impl From<Sha256Domain> for Fr {
 }
 
 impl Domain for Sha256Domain {
+    type Field = Fr;
+
     fn into_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }

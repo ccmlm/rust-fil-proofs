@@ -1,7 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use filecoin_hashers::{blake2s::Blake2sHasher, sha256::Sha256Hasher, Hasher};
+use filecoin_hashers::{blake2s::Blake2sHasher, halo, sha256::Sha256Hasher, Hasher};
 #[cfg(feature = "cpu-profile")]
 use gperftools::profiler::PROFILER;
+use pasta_curves::Fp;
 use storage_proofs_core::{
     api_version::ApiVersion,
     drgraph::{Graph, BASE_DEGREE},
@@ -60,6 +61,18 @@ fn parents_loop_benchmark(c: &mut Criterion) {
             let graph = pregenerate_graph::<Sha256Hasher>(size, ApiVersion::V1_1_0);
             let mut parents = vec![0; graph.degree()];
             b.iter(|| black_box(parents_loop::<Sha256Hasher, _>(&graph, &mut parents)))
+        });
+        // Only bench one of the pasta fields for now (both Pasta fields should have the same
+        // benchmark performance).
+        group.bench_function(format!("Poseidon-pallas-{}", size), |b| {
+            let graph = pregenerate_graph::<halo::PoseidonHasher<Fp>>(size, ApiVersion::V1_1_0);
+            let mut parents = vec![0; graph.degree()];
+            b.iter(|| {
+                black_box(parents_loop::<halo::PoseidonHasher<Fp>, _>(
+                    &graph,
+                    &mut parents,
+                ))
+            })
         });
     }
 

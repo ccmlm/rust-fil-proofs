@@ -9,7 +9,7 @@ use bellperson::{
     ConstraintSystem, SynthesisError,
 };
 use blstrs::Scalar as Fr;
-use ff::PrimeField;
+use ff::{Field, PrimeField};
 use merkletree::{
     hash::{Algorithm as LightAlgorithm, Hashable as LightHashable},
     merkle::Element,
@@ -35,13 +35,31 @@ pub trait Domain:
     + Element
     + StdHash
 {
+    // TODO (jake): constrain this to `PrimeField<Repr = [u8; 32]>` and add `Domain:
+    // From<Self::Field> + Into<Self::Field>` and maybe remove the `Fr` dependence.
+    type Field: PrimeField;
+
     #[allow(clippy::wrong_self_convention)]
     fn into_bytes(&self) -> Vec<u8>;
     fn try_from_bytes(raw: &[u8]) -> anyhow::Result<Self>;
     /// Write itself into the given slice, LittleEndian bytes.
     fn write_bytes(&self, _: &mut [u8]) -> anyhow::Result<()>;
 
-    fn random<R: RngCore>(rng: &mut R) -> Self;
+    fn into_field(self) -> Self::Field {
+        let mut repr = <Self::Field as PrimeField>::Repr::default();
+        self.write_bytes(repr.as_mut())
+            .expect("domain's field is not 32 bytes");
+        Self::Field::from_repr_vartime(repr).expect("from_repr failure")
+    }
+
+    fn from_field(f: Self::Field) -> Self {
+        Self::try_from_bytes(f.to_repr().as_ref()).expect("try_from_bytes failure")
+    }
+
+    fn random<R: RngCore>(rng: &mut R) -> Self {
+        // Generate a field element then convert it to ensure that we stay in the field.
+        Self::from_field(Self::Field::random(rng))
+    }
 }
 
 pub trait HashFunction<T: Domain>: Clone + Debug + Send + Sync + LightAlgorithm<T> {

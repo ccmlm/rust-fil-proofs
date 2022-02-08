@@ -107,6 +107,8 @@ impl AsRef<[u8]> for PoseidonDomain {
 }
 
 impl Domain for PoseidonDomain {
+    type Field = Fr;
+
     fn into_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }

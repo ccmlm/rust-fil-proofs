@@ -3,12 +3,13 @@ use std::fs::remove_file;
 use blstrs::Scalar as Fr;
 use ff::{Field, PrimeField};
 use filecoin_hashers::{
-    blake2s::Blake2sHasher, poseidon::PoseidonHasher, sha256::Sha256Hasher, Domain, Hasher,
+    blake2s::Blake2sHasher, halo, poseidon::PoseidonHasher, sha256::Sha256Hasher, Domain, Hasher,
 };
 use fr32::fr_into_bytes;
 use generic_array::typenum::{U0, U2, U4, U8};
 use glob::glob;
 use merkletree::store::{Store, StoreConfig};
+use pasta_curves::{Fp, Fq};
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use storage_proofs_core::{
@@ -39,13 +40,31 @@ fn test_stacked_porep_extract_all_sha256_base_8() {
 }
 
 #[test]
+fn test_stacked_porep_extract_all_sha256_base_8_halo() {
+    test_extract_all::<DiskTree<halo::Sha256Hasher<Fp>, U8, U0, U0>>();
+    test_extract_all::<DiskTree<halo::Sha256Hasher<Fq>, U8, U0, U0>>();
+}
+
+#[test]
 fn test_stacked_porep_extract_all_sha256_sub_8_8() {
     test_extract_all::<DiskTree<Sha256Hasher, U8, U8, U0>>();
 }
 
 #[test]
+fn test_stacked_porep_extract_all_sha256_sub_8_8_halo() {
+    test_extract_all::<DiskTree<halo::Sha256Hasher<Fp>, U8, U8, U0>>();
+    test_extract_all::<DiskTree<halo::Sha256Hasher<Fq>, U8, U8, U0>>();
+}
+
+#[test]
 fn test_stacked_porep_extract_all_sha256_top_8_8_2() {
     test_extract_all::<DiskTree<Sha256Hasher, U8, U8, U2>>();
+}
+
+#[test]
+fn test_stacked_porep_extract_all_sha256_top_8_8_2_halo() {
+    test_extract_all::<DiskTree<halo::Sha256Hasher<Fp>, U8, U8, U2>>();
+    test_extract_all::<DiskTree<halo::Sha256Hasher<Fq>, U8, U8, U2>>();
 }
 
 #[test]
@@ -69,13 +88,31 @@ fn test_stacked_porep_extract_all_poseidon_base_8() {
 }
 
 #[test]
+fn test_stacked_porep_extract_all_poseidon_base_8_halo() {
+    test_extract_all::<DiskTree<halo::PoseidonHasher<Fp>, U8, U0, U0>>();
+    test_extract_all::<DiskTree<halo::PoseidonHasher<Fq>, U8, U0, U0>>();
+}
+
+#[test]
 fn test_stacked_porep_extract_all_poseidon_sub_8_2() {
     test_extract_all::<DiskTree<PoseidonHasher, U8, U2, U0>>();
 }
 
 #[test]
+fn test_stacked_porep_extract_all_poseidon_sub_8_2_halo() {
+    test_extract_all::<DiskTree<halo::PoseidonHasher<Fp>, U8, U2, U0>>();
+    test_extract_all::<DiskTree<halo::PoseidonHasher<Fq>, U8, U2, U0>>();
+}
+
+#[test]
 fn test_stacked_porep_extract_all_poseidon_top_8_8_2() {
     test_extract_all::<DiskTree<PoseidonHasher, U8, U8, U2>>();
+}
+
+#[test]
+fn test_stacked_porep_extract_all_poseidon_top_8_8_2_halo() {
+    test_extract_all::<DiskTree<halo::PoseidonHasher<Fp>, U8, U8, U2>>();
+    test_extract_all::<DiskTree<halo::PoseidonHasher<Fq>, U8, U8, U2>>();
 }
 
 fn test_extract_all<Tree: 'static + MerkleTreeTrait>() {
@@ -338,7 +375,24 @@ fn test_prove_verify_fixed(n: usize) {
 
     test_prove_verify::<DiskTree<PoseidonHasher, U8, U0, U0>>(n, challenges.clone());
     test_prove_verify::<DiskTree<PoseidonHasher, U8, U2, U0>>(n, challenges.clone());
-    test_prove_verify::<DiskTree<PoseidonHasher, U8, U8, U2>>(n, challenges);
+    test_prove_verify::<DiskTree<PoseidonHasher, U8, U8, U2>>(n, challenges.clone());
+
+    // Alternate the Pasta field, rather than run each test for both fields.
+    test_prove_verify::<DiskTree<halo::Sha256Hasher<Fp>, U8, U0, U0>>(n, challenges.clone());
+    test_prove_verify::<DiskTree<halo::Sha256Hasher<Fp>, U8, U2, U0>>(n, challenges.clone());
+    test_prove_verify::<DiskTree<halo::Sha256Hasher<Fp>, U8, U8, U2>>(n, challenges.clone());
+
+    test_prove_verify::<DiskTree<halo::Sha256Hasher<Fq>, U4, U0, U0>>(n, challenges.clone());
+    test_prove_verify::<DiskTree<halo::Sha256Hasher<Fq>, U4, U2, U0>>(n, challenges.clone());
+    test_prove_verify::<DiskTree<halo::Sha256Hasher<Fq>, U4, U8, U2>>(n, challenges.clone());
+
+    test_prove_verify::<DiskTree<halo::PoseidonHasher<Fq>, U8, U0, U0>>(n, challenges.clone());
+    test_prove_verify::<DiskTree<halo::PoseidonHasher<Fq>, U8, U2, U0>>(n, challenges.clone());
+    test_prove_verify::<DiskTree<halo::PoseidonHasher<Fq>, U8, U8, U2>>(n, challenges.clone());
+
+    test_prove_verify::<DiskTree<halo::PoseidonHasher<Fp>, U4, U0, U0>>(n, challenges.clone());
+    test_prove_verify::<DiskTree<halo::PoseidonHasher<Fp>, U4, U2, U0>>(n, challenges.clone());
+    test_prove_verify::<DiskTree<halo::PoseidonHasher<Fp>, U4, U8, U2>>(n, challenges);
 }
 
 fn test_prove_verify<Tree: 'static + MerkleTreeTrait>(n: usize, challenges: LayerChallenges) {
@@ -355,7 +409,7 @@ fn test_prove_verify<Tree: 'static + MerkleTreeTrait>(n: usize, challenges: Laye
     let replica_id: <Tree::Hasher as Hasher>::Domain =
         <Tree::Hasher as Hasher>::Domain::random(&mut rng);
     let data: Vec<u8> = (0..nodes)
-        .flat_map(|_| fr_into_bytes(&Fr::random(&mut rng)))
+        .flat_map(|_| <Tree::Hasher as Hasher>::Domain::random(&mut rng).into_bytes())
         .collect();
 
     // MT for original data is always named tree-d, and it will be

@@ -10,7 +10,7 @@ use bellperson::{
 };
 use blstrs::Scalar as Fr;
 use ff::PrimeField;
-use generic_array::typenum::{Unsigned, U2, U4, U8};
+use generic_array::typenum::{Unsigned, U11, U2, U4, U8};
 use lazy_static::lazy_static;
 use merkletree::{
     hash::{Algorithm, Hashable},
@@ -45,6 +45,16 @@ lazy_static! {
         tm.insert::<FieldArity<Fq, PoseidonMDArity>>(PoseidonConstants::new());
         tm
     };
+
+    // Used during column hashing.
+    pub static ref POSEIDON_CONSTANTS_2_PALLAS: PoseidonConstants<Fp, U2> =
+        PoseidonConstants::new();
+    pub static ref POSEIDON_CONSTANTS_11_PALLAS: PoseidonConstants<Fp, U11> =
+        PoseidonConstants::new();
+    pub static ref POSEIDON_CONSTANTS_2_VESTA: PoseidonConstants<Fq, U2> =
+        PoseidonConstants::new();
+    pub static ref POSEIDON_CONSTANTS_11_VESTA: PoseidonConstants<Fq, U11> =
+        PoseidonConstants::new();
 }
 
 pub struct FieldArity<F, A>(PhantomData<(F, A)>)
@@ -99,7 +109,7 @@ impl<F: FieldExt> Default for PoseidonDomain<F> {
 // Pasta curves.
 impl<F: FieldExt> From<Fr> for PoseidonDomain<F> {
     fn from(_fr: Fr) -> Self {
-        panic!("cannot convert BSL12-381 scalar to halo::PoseidonDomain")
+        panic!("cannot convert BLS12-381 scalar to halo::PoseidonDomain")
     }
 }
 
@@ -107,7 +117,7 @@ impl<F: FieldExt> From<Fr> for PoseidonDomain<F> {
 #[allow(clippy::from_over_into)]
 impl<F: FieldExt> Into<Fr> for PoseidonDomain<F> {
     fn into(self) -> Fr {
-        panic!("cannot convert halo::PoseidonDomain into BSL12-381 scalar")
+        panic!("cannot convert halo::PoseidonDomain into BLS12-381 scalar")
     }
 }
 
@@ -196,6 +206,8 @@ impl<F: FieldExt> std::hash::Hash for PoseidonDomain<F> {
 }
 
 impl<F: FieldExt> Domain for PoseidonDomain<F> {
+    type Field = F;
+
     fn into_bytes(&self) -> Vec<u8> {
         self.0.as_ref().to_vec()
     }

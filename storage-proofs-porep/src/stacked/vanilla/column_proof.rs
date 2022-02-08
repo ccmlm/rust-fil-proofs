@@ -1,5 +1,4 @@
-use blstrs::Scalar as Fr;
-use filecoin_hashers::Hasher;
+use filecoin_hashers::{Domain, Hasher};
 use log::trace;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use storage_proofs_core::{error::Result, merkle::MerkleProofTrait};
@@ -40,7 +39,7 @@ impl<Proof: MerkleProofTrait> ColumnProof<Proof> {
         self.column().get_node_at_layer(layer)
     }
 
-    pub fn column_hash(&self) -> Fr {
+    pub fn column_hash(&self) -> <<Proof::Hasher as Hasher>::Domain as Domain>::Field {
         self.column.hash()
     }
 
@@ -49,10 +48,10 @@ impl<Proof: MerkleProofTrait> ColumnProof<Proof> {
         challenge: u32,
         expected_root: &<Proof::Hasher as Hasher>::Domain,
     ) -> bool {
-        let c_i = self.column_hash();
+        let c_i = <Proof::Hasher as Hasher>::Domain::from_field(self.column_hash());
 
         check_eq!(&self.inclusion_proof.root(), expected_root);
-        check!(self.inclusion_proof.validate_data(c_i.into()));
+        check!(self.inclusion_proof.validate_data(c_i));
         check!(self.inclusion_proof.validate(challenge as usize));
 
         true

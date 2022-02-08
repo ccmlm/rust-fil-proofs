@@ -806,11 +806,12 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
                                         let el: <Tree::Hasher as Hasher>::Domain = store
                                             .read_at((i * nodes_count) + j + chunk * chunk_size)
                                             .expect("store read_at failure");
-                                        el.into()
+                                        el.into_field()
                                     })
                                     .collect();
 
-                                *hash = hash_single_column(&data).into();
+                                let digest = hash_single_column(&data);
+                                *hash = <Tree::Hasher as Hasher>::Domain::from_field(digest);
                             }
                         });
                     }
