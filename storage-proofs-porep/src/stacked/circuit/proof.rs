@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use anyhow::ensure;
 use bellperson::{gadgets::num::AllocatedNum, Circuit, ConstraintSystem, SynthesisError};
 use blstrs::Scalar as Fr;
-use filecoin_hashers::{HashFunction, Hasher};
+use filecoin_hashers::{Domain, HashFunction, Hasher};
 use fr32::u64_into_fr;
 use storage_proofs_core::{
     compound_proof::{CircuitComponent, CompoundProof},
@@ -25,7 +25,11 @@ use crate::stacked::{circuit::params::Proof, StackedDrg};
 ///
 /// * `params` - parameters for the curve
 ///
-pub struct StackedCircuit<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> {
+pub struct StackedCircuit<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
+{
     public_params: <StackedDrg<'a, Tree, G> as ProofScheme<'a>>::PublicParams,
     replica_id: Option<<Tree::Hasher as Hasher>::Domain>,
     comm_d: Option<G::Domain>,
@@ -41,7 +45,11 @@ pub struct StackedCircuit<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hash
 // #[derive(Clone)]) because derive(Clone) will only expand for MerkleTreeTrait types that also
 // implement Clone. Not every MerkleTreeTrait type is Clone-able because not all merkel Store's are
 // Clone-able, therefore deriving Clone would impl Clone for less than all possible Tree types.
-impl<'a, Tree: MerkleTreeTrait, G: Hasher> Clone for StackedCircuit<'a, Tree, G> {
+impl<'a, Tree: MerkleTreeTrait, G: Hasher> Clone for StackedCircuit<'a, Tree, G>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
+{
     fn clone(&self) -> Self {
         StackedCircuit {
             public_params: self.public_params.clone(),
@@ -55,11 +63,19 @@ impl<'a, Tree: MerkleTreeTrait, G: Hasher> Clone for StackedCircuit<'a, Tree, G>
     }
 }
 
-impl<'a, Tree: MerkleTreeTrait, G: Hasher> CircuitComponent for StackedCircuit<'a, Tree, G> {
+impl<'a, Tree: MerkleTreeTrait, G: Hasher> CircuitComponent for StackedCircuit<'a, Tree, G>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
+{
     type ComponentPrivateInputs = ();
 }
 
-impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedCircuit<'a, Tree, G> {
+impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedCircuit<'a, Tree, G>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
+{
     #[allow(clippy::too_many_arguments)]
     pub fn synthesize<CS>(
         mut cs: CS,
@@ -88,7 +104,11 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedCircuit<'a
     }
 }
 
-impl<'a, Tree: MerkleTreeTrait, G: Hasher> Circuit<Fr> for StackedCircuit<'a, Tree, G> {
+impl<'a, Tree: MerkleTreeTrait, G: Hasher> Circuit<Fr> for StackedCircuit<'a, Tree, G>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
+{
     fn synthesize<CS: ConstraintSystem<Fr>>(self, cs: &mut CS) -> Result<(), SynthesisError> {
         let StackedCircuit {
             public_params,
@@ -181,7 +201,11 @@ impl<'a, Tree: MerkleTreeTrait, G: Hasher> Circuit<Fr> for StackedCircuit<'a, Tr
 }
 
 #[allow(dead_code)]
-pub struct StackedCompound<Tree: MerkleTreeTrait, G: Hasher> {
+pub struct StackedCompound<Tree: MerkleTreeTrait, G: Hasher>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
+{
     partitions: Option<usize>,
     _t: PhantomData<Tree>,
     _g: PhantomData<G>,
@@ -189,6 +213,9 @@ pub struct StackedCompound<Tree: MerkleTreeTrait, G: Hasher> {
 
 impl<C: Circuit<Fr>, P: ParameterSetMetadata, Tree: MerkleTreeTrait, G: Hasher>
     CacheableParameters<C, P> for StackedCompound<Tree, G>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
 {
     fn cache_prefix() -> String {
         format!(
@@ -202,6 +229,9 @@ impl<C: Circuit<Fr>, P: ParameterSetMetadata, Tree: MerkleTreeTrait, G: Hasher>
 impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher>
     CompoundProof<'a, StackedDrg<'a, Tree, G>, StackedCircuit<'a, Tree, G>>
     for StackedCompound<Tree, G>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
 {
     fn generate_public_inputs(
         pub_in: &<StackedDrg<'_, Tree, G> as ProofScheme<'_>>::PublicInputs,
@@ -343,7 +373,10 @@ fn generate_inclusion_inputs<Tree: 'static + MerkleTreeTrait>(
     por_params: &por::PublicParams,
     challenge: usize,
     k: Option<usize>,
-) -> Result<Vec<Fr>> {
+) -> Result<Vec<Fr>>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     let pub_inputs = por::PublicInputs::<<Tree::Hasher as Hasher>::Domain> {
         challenge,
         commitment: None,

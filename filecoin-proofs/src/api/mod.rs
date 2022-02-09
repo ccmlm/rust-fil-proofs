@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{ensure, Context, Result};
 use bincode::deserialize;
-use filecoin_hashers::Hasher;
+use blstrs::Scalar as Fr;
+use filecoin_hashers::{Domain, Hasher};
 use fr32::{write_unpadded, Fr32Reader};
 use log::{info, trace};
 use memmap::MmapOptions;
@@ -86,7 +87,10 @@ pub fn get_unsealed_range<T: Into<PathBuf> + AsRef<Path>, Tree: 'static + Merkle
     ticket: Ticket,
     offset: UnpaddedByteIndex,
     num_bytes: UnpaddedBytesAmount,
-) -> Result<UnpaddedBytesAmount> {
+) -> Result<UnpaddedBytesAmount>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     info!("get_unsealed_range:start");
 
     let f_out = File::create(&output_path)
@@ -146,6 +150,7 @@ where
     R: Read,
     W: Write,
     Tree: 'static + MerkleTreeTrait,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     info!("unseal_range:start");
     ensure!(comm_d != [0; 32], "Invalid all zero commitment (comm_d)");
@@ -213,6 +218,7 @@ where
     P: Into<PathBuf> + AsRef<Path>,
     W: Write,
     Tree: 'static + MerkleTreeTrait,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     info!("unseal_range_mapped:start");
     ensure!(comm_d != [0; 32], "Invalid all zero commitment (comm_d)");
@@ -279,6 +285,7 @@ where
     P: Into<PathBuf> + AsRef<Path>,
     W: Write,
     Tree: 'static + MerkleTreeTrait,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     trace!("unseal_range_inner:start");
 
@@ -543,7 +550,10 @@ fn verify_store(config: &StoreConfig, arity: usize, required_configs: usize) -> 
 }
 
 // Verifies if a LevelCacheStore specified by a config is consistent.
-fn verify_level_cache_store<Tree: MerkleTreeTrait>(config: &StoreConfig) -> Result<()> {
+fn verify_level_cache_store<Tree: MerkleTreeTrait>(config: &StoreConfig) -> Result<()>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     let store_path = StoreConfig::data_path(&config.path, &config.id);
     if !Path::new(&store_path).exists() {
         let required_configs = get_base_tree_count::<Tree>();
@@ -630,6 +640,7 @@ pub fn validate_cache_for_precommit_phase2<R, T, Tree: MerkleTreeTrait>(
 where
     R: AsRef<Path>,
     T: AsRef<Path>,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     info!("validate_cache_for_precommit_phase2:start");
 
@@ -674,6 +685,7 @@ pub fn validate_cache_for_commit<R, T, Tree: MerkleTreeTrait>(
 where
     R: AsRef<Path>,
     T: AsRef<Path>,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     info!("validate_cache_for_commit:start");
 

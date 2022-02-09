@@ -68,7 +68,10 @@ lazy_static! {
 }
 
 #[derive(Debug)]
-pub struct StackedDrg<'a, Tree: MerkleTreeTrait, G: Hasher> {
+pub struct StackedDrg<'a, Tree: MerkleTreeTrait, G: Hasher>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = <G::Domain as Domain>::Field>,
+{
     _a: PhantomData<&'a Tree>,
     _b: PhantomData<&'a G>,
 }
@@ -93,7 +96,10 @@ pub type PrepareTreeRDataCallback<Tree: 'static + MerkleTreeTrait> =
         end: usize,
     ) -> Result<TreeRElementData<Tree>>;
 
-impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tree, G> {
+impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tree, G>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = <G::Domain as Domain>::Field>,
+{
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn prove_layers(
         graph: &StackedBucketGraph<Tree::Hasher>,
@@ -800,18 +806,17 @@ impl<'a, Tree: 'static + MerkleTreeTrait, G: 'static + Hasher> StackedDrg<'a, Tr
 
                         s.execute(move || {
                             for (j, hash) in hashes_chunk.iter_mut().enumerate() {
-                                let data: Vec<_> = (1..=layers)
+                                let data: Vec<<<Tree::Hasher as Hasher>::Domain as Domain>::Field> = (1..=layers)
                                     .map(|layer| {
                                         let store = labels.labels_for_layer(layer);
                                         let el: <Tree::Hasher as Hasher>::Domain = store
                                             .read_at((i * nodes_count) + j + chunk * chunk_size)
                                             .expect("store read_at failure");
-                                        el.into_field()
+                                        el.into()
                                     })
                                     .collect();
 
-                                let digest = hash_single_column(&data);
-                                *hash = <Tree::Hasher as Hasher>::Domain::from_field(digest);
+                                *hash = hash_single_column(&data).into();
                             }
                         });
                     }

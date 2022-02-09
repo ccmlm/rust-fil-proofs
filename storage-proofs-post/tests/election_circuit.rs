@@ -26,7 +26,10 @@ fn test_election_post_circuit_poseidon() {
     test_election_post_circuit::<LCTree<PoseidonHasher, U8, U0, U0>>(22_940);
 }
 
-fn test_election_post_circuit<Tree: 'static + MerkleTreeTrait>(expected_constraints: usize) {
+fn test_election_post_circuit<Tree: 'static + MerkleTreeTrait>(expected_constraints: usize)
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     let rng = &mut XorShiftRng::from_seed(TEST_SEED);
 
     let leaves = 64 * get_base_tree_count::<Tree>();

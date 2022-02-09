@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use blstrs::Scalar as Fr;
+use filecoin_hashers::{Domain, Hasher};
 use storage_proofs_core::{
     api_version::ApiVersion,
     merkle::MerkleTreeTrait,
@@ -55,7 +57,10 @@ impl From<PoRepConfig> for SectorSize {
 
 impl PoRepConfig {
     /// Returns the cache identifier as used by `storage-proofs::parameter_cache`.
-    pub fn get_cache_identifier<Tree: 'static + MerkleTreeTrait>(&self) -> Result<String> {
+    pub fn get_cache_identifier<Tree: 'static + MerkleTreeTrait>(&self) -> Result<String>
+    where
+        <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    {
         let params = public_params::<Tree>(
             self.sector_size.into(),
             self.partitions.into(),
@@ -71,17 +76,26 @@ impl PoRepConfig {
         )
     }
 
-    pub fn get_cache_metadata_path<Tree: 'static + MerkleTreeTrait>(&self) -> Result<PathBuf> {
+    pub fn get_cache_metadata_path<Tree: 'static + MerkleTreeTrait>(&self) -> Result<PathBuf>
+    where
+        <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    {
         let id = self.get_cache_identifier::<Tree>()?;
         Ok(parameter_cache_metadata_path(&id))
     }
 
-    pub fn get_cache_verifying_key_path<Tree: 'static + MerkleTreeTrait>(&self) -> Result<PathBuf> {
+    pub fn get_cache_verifying_key_path<Tree: 'static + MerkleTreeTrait>(&self) -> Result<PathBuf>
+    where
+        <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    {
         let id = self.get_cache_identifier::<Tree>()?;
         Ok(parameter_cache_verifying_key_path(&id))
     }
 
-    pub fn get_cache_params_path<Tree: 'static + MerkleTreeTrait>(&self) -> Result<PathBuf> {
+    pub fn get_cache_params_path<Tree: 'static + MerkleTreeTrait>(&self) -> Result<PathBuf>
+    where
+        <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    {
         let id = self.get_cache_identifier::<Tree>()?;
         Ok(parameter_cache_params_path(&id))
     }

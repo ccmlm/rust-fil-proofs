@@ -30,14 +30,15 @@ pub trait Domain:
     + From<Fr>
     + From<<Fr as PrimeField>::Repr>
     + Into<Fr>
+    + From<Self::Field>
+    + From<[u8; 32]>
+    + Into<Self::Field>
     + Serialize
     + DeserializeOwned
     + Element
     + StdHash
 {
-    // TODO (jake): constrain this to `PrimeField<Repr = [u8; 32]>` and add `Domain:
-    // From<Self::Field> + Into<Self::Field>` and maybe remove the `Fr` dependence.
-    type Field: PrimeField;
+    type Field: PrimeField<Repr = [u8; 32]>;
 
     #[allow(clippy::wrong_self_convention)]
     fn into_bytes(&self) -> Vec<u8>;
@@ -45,22 +46,31 @@ pub trait Domain:
     /// Write itself into the given slice, LittleEndian bytes.
     fn write_bytes(&self, _: &mut [u8]) -> anyhow::Result<()>;
 
-    fn into_field(self) -> Self::Field {
-        let mut repr = <Self::Field as PrimeField>::Repr::default();
-        self.write_bytes(repr.as_mut())
-            .expect("domain's field is not 32 bytes");
-        Self::Field::from_repr_vartime(repr).expect("from_repr failure")
-    }
-
-    fn from_field(f: Self::Field) -> Self {
-        Self::try_from_bytes(f.to_repr().as_ref()).expect("try_from_bytes failure")
-    }
-
     fn random<R: RngCore>(rng: &mut R) -> Self {
-        // Generate a field element then convert it to ensure that we stay in the field.
-        Self::from_field(Self::Field::random(rng))
+        // Generating a field element then converting it ensures that we stay within the field.
+        Self::Field::random(rng).into()
     }
 }
+
+/*
+pub trait GrothDomain: Domain<Field = Fr> {}
+
+impl<D> GrothDomain for D
+where
+    D: Domain<Field = Fr>,
+{}
+
+pub trait GrothHasher: Hasher
+where
+    Self::Domain: GrothDomain + Domain<Field = Fr>,
+{}
+
+impl<H> GrothHasher for H
+where
+    H: Hasher,
+    H::Domain: GrothDomain + Domain<Field = Fr>,
+{}
+*/
 
 pub trait HashFunction<T: Domain>: Clone + Debug + Send + Sync + LightAlgorithm<T> {
     fn hash(data: &[u8]) -> T;

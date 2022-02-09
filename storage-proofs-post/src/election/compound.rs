@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use bellperson::Circuit;
 use blstrs::Scalar as Fr;
+use filecoin_hashers::{Domain, Hasher};
 use generic_array::typenum::Unsigned;
 use storage_proofs_core::{
     compound_proof::{CircuitComponent, CompoundProof},
@@ -20,12 +21,15 @@ use crate::election::{generate_leaf_challenge, ElectionPoSt, ElectionPoStCircuit
 pub struct ElectionPoStCompound<Tree>
 where
     Tree: MerkleTreeTrait,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     _t: PhantomData<Tree>,
 }
 
 impl<C: Circuit<Fr>, P: ParameterSetMetadata, Tree: MerkleTreeTrait> CacheableParameters<C, P>
     for ElectionPoStCompound<Tree>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     fn cache_prefix() -> String {
         format!("proof-of-spacetime-election-{}", Tree::display())
@@ -36,6 +40,7 @@ impl<'a, Tree> CompoundProof<'a, ElectionPoSt<'a, Tree>, ElectionPoStCircuit<Tre
     for ElectionPoStCompound<Tree>
 where
     Tree: 'static + MerkleTreeTrait,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     fn generate_public_inputs(
         pub_inputs: &<ElectionPoSt<'a, Tree> as ProofScheme<'a>>::PublicInputs,

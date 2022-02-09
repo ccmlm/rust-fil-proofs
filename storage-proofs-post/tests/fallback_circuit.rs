@@ -61,6 +61,7 @@ fn test_fallback_post<Tree: 'static + MerkleTreeTrait>(
     expected_constraints: usize,
 ) where
     Tree::Store: 'static,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     let rng = &mut XorShiftRng::from_seed(TEST_SEED);
 

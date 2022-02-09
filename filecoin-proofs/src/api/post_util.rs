@@ -4,7 +4,8 @@ use std::path::Path;
 
 use anyhow::{anyhow, ensure, Context, Result};
 use bincode::deserialize;
-use filecoin_hashers::Hasher;
+use blstrs::Scalar as Fr;
+use filecoin_hashers::{Domain, Hasher};
 use log::{debug, info};
 use storage_proofs_core::{
     cache_key::CacheKey, merkle::MerkleTreeTrait, proof::ProofScheme, sector::SectorId,
@@ -22,7 +23,10 @@ use crate::{
 };
 
 // Ensure that any associated cached data persisted is discarded.
-pub fn clear_cache<Tree: MerkleTreeTrait>(cache_dir: &Path) -> Result<()> {
+pub fn clear_cache<Tree: MerkleTreeTrait>(cache_dir: &Path) -> Result<()>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     info!("clear_cache:start");
 
     let t_aux = {
@@ -43,7 +47,10 @@ pub fn clear_cache<Tree: MerkleTreeTrait>(cache_dir: &Path) -> Result<()> {
 // Ensure that any associated cached data persisted is discarded.
 pub fn clear_caches<Tree: MerkleTreeTrait>(
     replicas: &BTreeMap<SectorId, PrivateReplicaInfo<Tree>>,
-) -> Result<()> {
+) -> Result<()>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     info!("clear_caches:start");
 
     for replica in replicas.values() {
@@ -62,7 +69,10 @@ pub fn generate_fallback_sector_challenges<Tree: 'static + MerkleTreeTrait>(
     randomness: &ChallengeSeed,
     pub_sectors: &[SectorId],
     _prover_id: ProverId,
-) -> Result<BTreeMap<SectorId, Vec<u64>>> {
+) -> Result<BTreeMap<SectorId, Vec<u64>>>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     info!("generate_sector_challenges:start");
     ensure!(
         post_config.typ == PoStType::Window || post_config.typ == PoStType::Winning,
@@ -127,7 +137,10 @@ pub fn generate_single_vanilla_proof<Tree: 'static + MerkleTreeTrait>(
     sector_id: SectorId,
     replica: &PrivateReplicaInfo<Tree>,
     challenges: &[u64],
-) -> Result<FallbackPoStSectorProof<Tree>> {
+) -> Result<FallbackPoStSectorProof<Tree>>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     info!("generate_single_vanilla_proof:start: {:?}", sector_id);
 
     let tree = &replica
@@ -183,7 +196,10 @@ pub fn partition_vanilla_proofs<Tree: MerkleTreeTrait>(
     pub_inputs: &fallback::PublicInputs<<Tree::Hasher as Hasher>::Domain>,
     partition_count: usize,
     vanilla_proofs: &[FallbackPoStSectorProof<Tree>],
-) -> Result<Vec<VanillaProof<Tree>>> {
+) -> Result<Vec<VanillaProof<Tree>>>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     info!("partition_vanilla_proofs:start");
     ensure!(
         post_config.typ == PoStType::Window || post_config.typ == PoStType::Winning,
@@ -263,7 +279,10 @@ pub fn single_partition_vanilla_proofs<Tree: MerkleTreeTrait>(
     pub_params: &fallback::PublicParams,
     pub_inputs: &fallback::PublicInputs<<Tree::Hasher as Hasher>::Domain>,
     vanilla_proofs: &[FallbackPoStSectorProof<Tree>],
-) -> Result<VanillaProof<Tree>> {
+) -> Result<VanillaProof<Tree>>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     info!("single_partition_vanilla_proofs:start");
     ensure!(pub_inputs.k.is_some(), "must have a partition index");
     let partition_index = pub_inputs.k.expect("prechecked");

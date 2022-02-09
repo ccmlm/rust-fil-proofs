@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use ff::PrimeField;
 use filecoin_hashers::{Domain, Hasher};
 use fr32::bytes_into_fr_repr_safe;
 use log::trace;
@@ -50,26 +49,19 @@ impl<H: Hasher> EncodingProof<H> {
         bytes_into_fr_repr_safe(hasher.finalize().as_ref()).into()
     }
 
-    // TODO (jake): bound `StackedDrg`'s `H` and `G` to the same `Domain::Field`
-    // pub fn verify<G: Hasher>(...) -> bool where G::Domain::Field = H::Domain::Field { ... }
     pub fn verify<G: Hasher>(
         &self,
         replica_id: &H::Domain,
         exp_encoded_node: &H::Domain,
         decoded_node: &G::Domain,
-    ) -> bool {
+    ) -> bool
+    where
+        G::Domain: Domain<Field = <H::Domain as Domain>::Field>,
+    {
         let key = self.create_key(replica_id);
 
-        // TODO (jake): once we bound `H::Domain::Field  == G::Domain::Field` we can simplify this
-        // conversion.
-        let decoded_node = {
-            let mut repr = <<H::Domain as Domain>::Field as PrimeField>::Repr::default();
-            repr.as_mut().copy_from_slice(decoded_node.as_ref());
-            let f = <<H::Domain as Domain>::Field as PrimeField>::from_repr_vartime(repr)
-                .expect("from_repr failure");
-            <H::Domain as Domain>::from_field(f)
-        };
-        let encoded_node = encode(key, decoded_node);
+        let fr: <G::Domain as Domain>::Field = (*decoded_node).into();
+        let encoded_node = encode(key, fr.into());
 
         check_eq!(exp_encoded_node, &encoded_node);
 

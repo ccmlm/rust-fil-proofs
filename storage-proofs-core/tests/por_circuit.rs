@@ -112,7 +112,10 @@ fn test_por_circuit_poseidon_top_8_2_4() {
     test_por_circuit::<TreeTop<PoseidonHasher, U8, U2, U4>>(3, 1_764);
 }
 
-fn test_por_circuit<Tree: 'static + MerkleTreeTrait>(num_inputs: usize, num_constraints: usize) {
+fn test_por_circuit<Tree: 'static + MerkleTreeTrait>(num_inputs: usize, num_constraints: usize)
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     let mut rng = XorShiftRng::from_seed(TEST_SEED);
 
     // Ensure arity will evenly fill tree.
@@ -203,7 +206,10 @@ fn test_por_circuit_poseidon_base_8_private_root() {
     test_por_circuit_private_root::<TreeBase<PoseidonHasher, U8>>(1_062);
 }
 
-fn test_por_circuit_private_root<Tree: MerkleTreeTrait>(num_constraints: usize) {
+fn test_por_circuit_private_root<Tree: MerkleTreeTrait>(num_constraints: usize)
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     let mut rng = XorShiftRng::from_seed(TEST_SEED);
 
     let leaves = 64 * get_base_tree_count::<Tree>();
@@ -285,6 +291,8 @@ fn create_tree<Tree: MerkleTreeTrait>(
     labels: &[<<Tree as MerkleTreeTrait>::Hasher as Hasher>::Domain],
     tmp_path: &Path,
 ) -> MerkleTreeWrapper<Tree::Hasher, Tree::Store, Tree::Arity, Tree::SubTreeArity, Tree::TopTreeArity>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     let sector_nodes = labels.len();
     let tree_name = Tree::display();

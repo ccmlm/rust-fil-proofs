@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use bellperson::{gadgets::num::AllocatedNum, Circuit, ConstraintSystem, SynthesisError};
 use blstrs::Scalar as Fr;
 use ff::Field;
-use filecoin_hashers::{poseidon::PoseidonFunction, HashFunction, Hasher, PoseidonMDArity};
+use filecoin_hashers::{Domain, poseidon::PoseidonFunction, HashFunction, Hasher, PoseidonMDArity};
 use generic_array::typenum::Unsigned;
 use storage_proofs_core::{
     compound_proof::CircuitComponent,
@@ -12,7 +12,10 @@ use storage_proofs_core::{
 };
 
 /// This is the `ElectionPoSt` circuit.
-pub struct ElectionPoStCircuit<Tree: MerkleTreeTrait> {
+pub struct ElectionPoStCircuit<Tree: MerkleTreeTrait>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     pub comm_r: Option<Fr>,
     pub comm_c: Option<Fr>,
     pub comm_r_last: Option<Fr>,
@@ -29,11 +32,17 @@ pub struct ElectionPoStCircuit<Tree: MerkleTreeTrait> {
 #[derive(Clone, Default)]
 pub struct ComponentPrivateInputs {}
 
-impl<'a, Tree: MerkleTreeTrait> CircuitComponent for ElectionPoStCircuit<Tree> {
+impl<'a, Tree: MerkleTreeTrait> CircuitComponent for ElectionPoStCircuit<Tree>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     type ComponentPrivateInputs = ComponentPrivateInputs;
 }
 
-impl<'a, Tree: 'static + MerkleTreeTrait> Circuit<Fr> for ElectionPoStCircuit<Tree> {
+impl<'a, Tree: 'static + MerkleTreeTrait> Circuit<Fr> for ElectionPoStCircuit<Tree>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     fn synthesize<CS: ConstraintSystem<Fr>>(self, cs: &mut CS) -> Result<(), SynthesisError> {
         let comm_r = self.comm_r;
         let comm_c = self.comm_c;

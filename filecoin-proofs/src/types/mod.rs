@@ -2,7 +2,8 @@ pub use merkletree::store::StoreConfig;
 pub use storage_proofs_core::merkle::{MerkleProof, MerkleTreeTrait};
 pub use storage_proofs_porep::stacked::{Labels, PersistentAux, TemporaryAux};
 
-use filecoin_hashers::Hasher;
+use blstrs::Scalar as Fr;
+use filecoin_hashers::{Domain, Hasher};
 use serde::{Deserialize, Serialize};
 use storage_proofs_core::{merkle::BinaryMerkleTree, sector::SectorId};
 use storage_proofs_porep::stacked;
@@ -59,7 +60,11 @@ pub struct SealPreCommitOutput {
 pub type VanillaSealProof<Tree> = stacked::Proof<Tree, DefaultPieceHasher>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SealCommitPhase1Output<Tree: MerkleTreeTrait> {
+pub struct SealCommitPhase1Output<Tree: MerkleTreeTrait>
+where
+    // <Tree::Hasher as Hasher>::Domain: filecoin_hashers::Domain<Field = <<DefaultPieceHasher as Hasher>::Domain as filecoin_hashers::Domain>::Field>,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     #[serde(bound(
         serialize = "VanillaSealProof<Tree>: Serialize",
         deserialize = "VanillaSealProof<Tree>: Deserialize<'de>"

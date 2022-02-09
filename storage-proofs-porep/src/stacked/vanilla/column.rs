@@ -44,7 +44,7 @@ impl<H: Hasher> Column<H> {
                 .rows
                 .iter()
                 .copied()
-                .map(|domain| domain.into_field())
+                .map(Into::into)
                 .collect::<Vec<_>>(),
         )
     }

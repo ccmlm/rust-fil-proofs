@@ -11,7 +11,7 @@ use bellperson::{
     Circuit, ConstraintSystem, SynthesisError,
 };
 use blstrs::Scalar as Fr;
-use filecoin_hashers::{HashFunction, Hasher, PoseidonArity};
+use filecoin_hashers::{Domain, HashFunction, Hasher, PoseidonArity};
 use generic_array::typenum::Unsigned;
 
 use crate::{
@@ -33,7 +33,10 @@ use crate::{
 /// * `auth_path` - The authentication path of the leaf in the tree.
 /// * `root` - The merkle root of the tree.
 ///
-pub struct PoRCircuit<Tree: MerkleTreeTrait> {
+pub struct PoRCircuit<Tree: MerkleTreeTrait>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     value: Root<Fr>,
     auth_path: AuthPath<Tree::Hasher, Tree::Arity, Tree::SubTreeArity, Tree::TopTreeArity>,
     root: Root<Fr>,
@@ -47,7 +50,10 @@ pub struct AuthPath<
     U: 'static + PoseidonArity,
     V: 'static + PoseidonArity,
     W: 'static + PoseidonArity,
-> {
+>
+where
+    H::Domain: Domain<Field = Fr>,
+{
     base: SubPath<H, U>,
     sub: SubPath<H, V>,
     top: SubPath<H, W>,
@@ -59,6 +65,8 @@ impl<
         V: 'static + PoseidonArity,
         W: 'static + PoseidonArity,
     > From<Vec<(Vec<Option<Fr>>, Option<usize>)>> for AuthPath<H, U, V, W>
+where
+    H::Domain: Domain<Field = Fr>,
 {
     fn from(mut base_opts: Vec<(Vec<Option<Fr>>, Option<usize>)>) -> Self {
         let has_top = W::to_usize() > 0;
@@ -119,19 +127,28 @@ impl<
 }
 
 #[derive(Debug, Clone)]
-struct SubPath<H: Hasher, Arity: 'static + PoseidonArity> {
+struct SubPath<H: Hasher, Arity: 'static + PoseidonArity>
+where
+    H::Domain: Domain<Field = Fr>,
+{
     path: Vec<PathElement<H, Arity>>,
 }
 
 #[derive(Debug, Clone)]
-struct PathElement<H: Hasher, Arity: 'static + PoseidonArity> {
+struct PathElement<H: Hasher, Arity: 'static + PoseidonArity>
+where
+    H::Domain: Domain<Field = Fr>,
+{
     hashes: Vec<Option<Fr>>,
     index: Option<usize>,
     _a: PhantomData<Arity>,
     _h: PhantomData<H>,
 }
 
-impl<H: Hasher, Arity: 'static + PoseidonArity> SubPath<H, Arity> {
+impl<H: Hasher, Arity: 'static + PoseidonArity> SubPath<H, Arity>
+where
+    H::Domain: Domain<Field = Fr>,
+{
     fn synthesize<CS: ConstraintSystem<Fr>>(
         self,
         mut cs: CS,
@@ -193,7 +210,10 @@ impl<H: Hasher, Arity: 'static + PoseidonArity> SubPath<H, Arity> {
     }
 }
 
-impl<H: Hasher, U: PoseidonArity, V: PoseidonArity, W: PoseidonArity> AuthPath<H, U, V, W> {
+impl<H: Hasher, U: PoseidonArity, V: PoseidonArity, W: PoseidonArity> AuthPath<H, U, V, W>
+where
+    H::Domain: Domain<Field = Fr>,
+{
     pub fn blank(leaves: usize) -> Self {
         let has_sub = V::to_usize() > 0;
         let has_top = W::to_usize() > 0;
@@ -239,11 +259,17 @@ impl<H: Hasher, U: PoseidonArity, V: PoseidonArity, W: PoseidonArity> AuthPath<H
     }
 }
 
-impl<Tree: MerkleTreeTrait> CircuitComponent for PoRCircuit<Tree> {
+impl<Tree: MerkleTreeTrait> CircuitComponent for PoRCircuit<Tree>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     type ComponentPrivateInputs = Option<Root<Fr>>;
 }
 
-pub struct PoRCompound<Tree: MerkleTreeTrait> {
+pub struct PoRCompound<Tree: MerkleTreeTrait>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     _tree: PhantomData<Tree>,
 }
 
@@ -259,6 +285,8 @@ pub fn challenge_into_auth_path_bits(challenge: usize, leaves: usize) -> Vec<boo
 
 impl<C: Circuit<Fr>, P: ParameterSetMetadata, Tree: MerkleTreeTrait> CacheableParameters<C, P>
     for PoRCompound<Tree>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     fn cache_prefix() -> String {
         format!("proof-of-retrievability-{}", Tree::display())
@@ -268,6 +296,8 @@ impl<C: Circuit<Fr>, P: ParameterSetMetadata, Tree: MerkleTreeTrait> CacheablePa
 // can only implment for Bls12 because por is not generic over the engine.
 impl<'a, Tree: 'static + MerkleTreeTrait> CompoundProof<'a, PoR<Tree>, PoRCircuit<Tree>>
     for PoRCompound<Tree>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     fn circuit<'b>(
         public_inputs: &<PoR<Tree> as ProofScheme<'a>>::PublicInputs,
@@ -336,7 +366,10 @@ impl<'a, Tree: 'static + MerkleTreeTrait> CompoundProof<'a, PoR<Tree>, PoRCircui
     }
 }
 
-impl<'a, Tree: MerkleTreeTrait> Circuit<Fr> for PoRCircuit<Tree> {
+impl<'a, Tree: MerkleTreeTrait> Circuit<Fr> for PoRCircuit<Tree>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     /// # Public Inputs
     ///
     /// This circuit expects the following public inputs.
@@ -418,7 +451,10 @@ impl<'a, Tree: MerkleTreeTrait> Circuit<Fr> for PoRCircuit<Tree> {
     }
 }
 
-impl<'a, Tree: MerkleTreeTrait> PoRCircuit<Tree> {
+impl<'a, Tree: MerkleTreeTrait> PoRCircuit<Tree>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+{
     pub fn new(proof: Tree::Proof, private: bool) -> Self {
         PoRCircuit::<Tree> {
             value: Root::Val(Some(proof.leaf().into())),
@@ -464,6 +500,7 @@ pub fn por_no_challenge_input<Tree, CS>(
 ) -> Result<(), SynthesisError>
 where
     Tree: MerkleTreeTrait,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
     CS: ConstraintSystem<Fr>,
 {
     let base_arity = Tree::Arity::to_usize();
@@ -637,7 +674,10 @@ mod tests {
         por_compound::<TestTree<PoseidonHasher, U8>>();
     }
 
-    fn por_compound<Tree: 'static + MerkleTreeTrait>() {
+    fn por_compound<Tree: 'static + MerkleTreeTrait>()
+    where
+        <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    {
         let mut rng = XorShiftRng::from_seed(TEST_SEED);
 
         let leaves = 64 * get_base_tree_count::<Tree>();
@@ -773,7 +813,10 @@ mod tests {
     fn test_por_circuit<Tree: 'static + MerkleTreeTrait>(
         num_inputs: usize,
         num_constraints: usize,
-    ) {
+    )
+    where
+        <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    {
         let rng = &mut XorShiftRng::from_seed(TEST_SEED);
 
         // Ensure arity will evenly fill tree.
@@ -904,7 +947,10 @@ mod tests {
         private_por_test_compound::<TestTree3<PoseidonHasher, U8, U2, U4>>();
     }
 
-    fn private_por_test_compound<Tree: 'static + MerkleTreeTrait>() {
+    fn private_por_test_compound<Tree: 'static + MerkleTreeTrait>()
+    where
+        <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    {
         let rng = &mut XorShiftRng::from_seed(TEST_SEED);
 
         // Ensure arity will evenly fill tree.
@@ -1022,7 +1068,10 @@ mod tests {
         test_private_por_input_circuit::<TestTree<PoseidonHasher, U8>>(1_062);
     }
 
-    fn test_private_por_input_circuit<Tree: MerkleTreeTrait>(num_constraints: usize) {
+    fn test_private_por_input_circuit<Tree: MerkleTreeTrait>(num_constraints: usize)
+    where
+        <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    {
         let mut rng = XorShiftRng::from_seed(TEST_SEED);
 
         let leaves = 64 * get_base_tree_count::<Tree>();

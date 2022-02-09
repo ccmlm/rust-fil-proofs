@@ -6,24 +6,25 @@ use bellperson::{
     ConstraintSystem, SynthesisError,
 };
 use blstrs::Scalar as Fr;
+use ff::PrimeField;
 use merkletree::{
     hash::{Algorithm, Hashable},
     merkle::Element,
 };
-use pasta_curves::arithmetic::FieldExt;
+use pasta_curves::{arithmetic::FieldExt, Fp, Fq};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
 use crate::{sha256 as groth, Domain, HashFunction, Hasher};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Sha256Domain<F: FieldExt> {
+pub struct Sha256Domain<F: FieldExt<Repr = [u8; 32]>> {
     // Wrapping `groth::Sha256Domain` allows us to reuse its method implementations.
     pub inner: groth::Sha256Domain,
     _f: PhantomData<F>,
 }
 
-impl<F: FieldExt> From<groth::Sha256Domain> for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> From<groth::Sha256Domain> for Sha256Domain<F> {
     fn from(domain: groth::Sha256Domain) -> Self {
         Sha256Domain {
             inner: domain,
@@ -33,7 +34,7 @@ impl<F: FieldExt> From<groth::Sha256Domain> for Sha256Domain<F> {
 }
 
 #[allow(clippy::from_over_into)]
-impl<F: FieldExt> Into<groth::Sha256Domain> for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Into<groth::Sha256Domain> for Sha256Domain<F> {
     fn into(self) -> groth::Sha256Domain {
         self.inner
     }
@@ -41,7 +42,7 @@ impl<F: FieldExt> Into<groth::Sha256Domain> for Sha256Domain<F> {
 
 // Disallow converting between fields; also BLS12-381's scalar field `Fr` size exceeds that of the
 // Pasta curves.
-impl<F: FieldExt> From<Fr> for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> From<Fr> for Sha256Domain<F> {
     fn from(_fr: Fr) -> Self {
         panic!("cannot convert BLS12-381 scalar to halo::Sha256Domain")
     }
@@ -49,14 +50,13 @@ impl<F: FieldExt> From<Fr> for Sha256Domain<F> {
 
 // Disallow converting between fields.
 #[allow(clippy::from_over_into)]
-impl<F: FieldExt> Into<Fr> for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Into<Fr> for Sha256Domain<F> {
     fn into(self) -> Fr {
         panic!("cannot convert halo::Sha256Domain into BLS12-381 scalar")
     }
 }
 
 // TODO (jake): decide if this is needed?
-/*
 impl From<Fp> for Sha256Domain<Fp> {
     fn from(fp: Fp) -> Self {
         Sha256Domain {
@@ -74,9 +74,20 @@ impl From<Fq> for Sha256Domain<Fq> {
         }
     }
 }
-*/
 
-impl<F: FieldExt> From<[u8; 32]> for Sha256Domain<F> {
+impl Into<Fp> for Sha256Domain<Fp> {
+    fn into(self) -> Fp {
+        Fp::from_repr_vartime(self.inner.0).expect("from_repr failure")
+    }
+}
+
+impl Into<Fq> for Sha256Domain<Fq> {
+    fn into(self) -> Fq {
+        Fq::from_repr_vartime(self.inner.0).expect("from_repr failure")
+    }
+}
+
+impl<F: FieldExt<Repr = [u8; 32]>> From<[u8; 32]> for Sha256Domain<F> {
     fn from(bytes: [u8; 32]) -> Self {
         Sha256Domain {
             inner: groth::Sha256Domain::from(bytes),
@@ -85,19 +96,19 @@ impl<F: FieldExt> From<[u8; 32]> for Sha256Domain<F> {
     }
 }
 
-impl<F: FieldExt> AsRef<[u8]> for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> AsRef<[u8]> for Sha256Domain<F> {
     fn as_ref(&self) -> &[u8] {
         self.inner.as_ref()
     }
 }
 
-impl<F: FieldExt> AsRef<Self> for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> AsRef<Self> for Sha256Domain<F> {
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl<F: FieldExt> Default for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Default for Sha256Domain<F> {
     fn default() -> Self {
         Sha256Domain {
             inner: groth::Sha256Domain::default(),
@@ -106,26 +117,26 @@ impl<F: FieldExt> Default for Sha256Domain<F> {
     }
 }
 
-impl<F: FieldExt> PartialOrd for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> PartialOrd for Sha256Domain<F> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.inner.partial_cmp(&other.inner)
     }
 }
 
-impl<F: FieldExt> Ord for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Ord for Sha256Domain<F> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.inner.cmp(&other.inner)
     }
 }
 
 #[allow(clippy::derive_hash_xor_eq)]
-impl<F: FieldExt> std::hash::Hash for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> std::hash::Hash for Sha256Domain<F> {
     fn hash<H: std::hash::Hasher>(&self, hasher: &mut H) {
         <groth::Sha256Domain as std::hash::Hash>::hash(&self.inner, hasher);
     }
 }
 
-impl<F: FieldExt> Element for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Element for Sha256Domain<F> {
     fn byte_len() -> usize {
         groth::Sha256Domain::byte_len()
     }
@@ -141,7 +152,10 @@ impl<F: FieldExt> Element for Sha256Domain<F> {
     }
 }
 
-impl<F: FieldExt> Domain for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Domain for Sha256Domain<F>
+where
+    Self: From<F> + Into<F>,
+{
     type Field = F;
 
     fn into_bytes(&self) -> Vec<u8> {
@@ -159,7 +173,6 @@ impl<F: FieldExt> Domain for Sha256Domain<F> {
     fn random<R: RngCore>(rng: &mut R) -> Self {
         // Generate a field element then convert to ensure that we stay within the field.
         let mut bytes = [0u8; 32];
-        // Panics if `F::Repr` is not 32 bytes.
         bytes.copy_from_slice(F::random(rng).to_repr().as_ref());
         Sha256Domain {
             inner: groth::Sha256Domain(bytes),
@@ -169,12 +182,12 @@ impl<F: FieldExt> Domain for Sha256Domain<F> {
 }
 
 #[derive(Default, Clone, Debug)]
-pub struct Sha256Function<F: FieldExt> {
+pub struct Sha256Function<F: FieldExt<Repr = [u8; 32]>> {
     inner: groth::Sha256Function,
     _f: PhantomData<F>,
 }
 
-impl<F: FieldExt> std::hash::Hasher for Sha256Function<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> std::hash::Hasher for Sha256Function<F> {
     fn write(&mut self, msg: &[u8]) {
         self.inner.write(msg);
     }
@@ -184,7 +197,7 @@ impl<F: FieldExt> std::hash::Hasher for Sha256Function<F> {
     }
 }
 
-impl<F: FieldExt> Hashable<Sha256Function<F>> for Sha256Domain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Hashable<Sha256Function<F>> for Sha256Domain<F> {
     fn hash(&self, hasher: &mut Sha256Function<F>) {
         <groth::Sha256Domain as Hashable<groth::Sha256Function>>::hash(
             &self.inner,
@@ -193,7 +206,7 @@ impl<F: FieldExt> Hashable<Sha256Function<F>> for Sha256Domain<F> {
     }
 }
 
-impl<F: FieldExt> Algorithm<Sha256Domain<F>> for Sha256Function<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Algorithm<Sha256Domain<F>> for Sha256Function<F> {
     #[inline]
     fn hash(&mut self) -> Sha256Domain<F> {
         // Calling `.into()` is safe because the output of `.hash()` is guaranteed to be 254 bits.
@@ -226,7 +239,10 @@ impl<F: FieldExt> Algorithm<Sha256Domain<F>> for Sha256Function<F> {
     }
 }
 
-impl<F: FieldExt> HashFunction<Sha256Domain<F>> for Sha256Function<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> HashFunction<Sha256Domain<F>> for Sha256Function<F>
+where
+    Sha256Domain<F>: Domain,
+{
     fn hash(data: &[u8]) -> Sha256Domain<F> {
         // Calling `.into()` is safe because the output of `.hash()` is guaranteed to be 254 bits.
         <groth::Sha256Function as HashFunction<groth::Sha256Domain>>::hash(data).into()
@@ -287,11 +303,14 @@ impl<F: FieldExt> HashFunction<Sha256Domain<F>> for Sha256Function<F> {
 }
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Sha256Hasher<F: FieldExt> {
+pub struct Sha256Hasher<F: FieldExt<Repr = [u8; 32]>> {
     _f: PhantomData<F>,
 }
 
-impl<F: FieldExt> Hasher for Sha256Hasher<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Hasher for Sha256Hasher<F>
+where
+    Sha256Domain<F>: Domain,
+{
     type Domain = Sha256Domain<F>;
     type Function = Sha256Function<F>;
 

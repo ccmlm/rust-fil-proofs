@@ -6,7 +6,7 @@ use bellperson::{
 };
 use blstrs::Scalar as Fr;
 use ff::PrimeField;
-use filecoin_hashers::Hasher;
+use filecoin_hashers::{Domain, Hasher};
 use storage_proofs_core::{
     compound_proof::CircuitComponent,
     error::Result,
@@ -37,7 +37,10 @@ use storage_proofs_core::{
 /// * `replica_id` - The id of the replica.
 ///
 
-pub struct DrgPoRepCircuit<'a, H: Hasher> {
+pub struct DrgPoRepCircuit<'a, H: Hasher>
+where
+    H::Domain: Domain<Field = Fr>,
+{
     pub replica_nodes: Vec<Option<Fr>>,
     #[allow(clippy::type_complexity)]
     pub replica_nodes_paths: Vec<Vec<(Vec<Option<Fr>>, Option<usize>)>>,
@@ -54,7 +57,10 @@ pub struct DrgPoRepCircuit<'a, H: Hasher> {
     pub _h: PhantomData<&'a H>,
 }
 
-impl<'a, H: 'static + Hasher> DrgPoRepCircuit<'a, H> {
+impl<'a, H: 'static + Hasher> DrgPoRepCircuit<'a, H>
+where
+    H::Domain: Domain<Field = Fr>,
+{
     #[allow(clippy::type_complexity, clippy::too_many_arguments)]
     pub fn synthesize<CS>(
         mut cs: CS,
@@ -95,7 +101,10 @@ pub struct ComponentPrivateInputs {
     pub comm_d: Option<Root<Fr>>,
 }
 
-impl<'a, H: Hasher> CircuitComponent for DrgPoRepCircuit<'a, H> {
+impl<'a, H: Hasher> CircuitComponent for DrgPoRepCircuit<'a, H>
+where
+    H::Domain: Domain<Field = Fr>,
+{
     type ComponentPrivateInputs = ComponentPrivateInputs;
 }
 
@@ -122,7 +131,10 @@ impl<'a, H: Hasher> CircuitComponent for DrgPoRepCircuit<'a, H> {
 ///
 /// Total = 2 + replica_parents.len()
 ///
-impl<'a, H: 'static + Hasher> Circuit<Fr> for DrgPoRepCircuit<'a, H> {
+impl<'a, H: 'static + Hasher> Circuit<Fr> for DrgPoRepCircuit<'a, H>
+where
+    H::Domain: Domain<Field = Fr>,
+{
     fn synthesize<CS: ConstraintSystem<Fr>>(self, cs: &mut CS) -> Result<(), SynthesisError> {
         let replica_id = self.replica_id;
         let replica_root = self.replica_root;

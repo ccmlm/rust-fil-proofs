@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use filecoin_hashers::Hasher;
+use filecoin_hashers::{Domain, Hasher};
 use merkletree::store::StoreConfig;
 use storage_proofs_core::{error::Result, merkle::BinaryMerkleTree, proof::ProofScheme, Data};
 
@@ -16,7 +16,10 @@ mod encode;
 
 pub const MAX_LEGACY_POREP_REGISTERED_PROOF_ID: u64 = 4;
 
-pub trait PoRep<'a, H: Hasher, G: Hasher>: ProofScheme<'a> {
+pub trait PoRep<'a, H: Hasher, G: Hasher>: ProofScheme<'a>
+where
+    H::Domain: Domain<Field = <G::Domain as Domain>::Field>,
+{
     type Tau;
     type ProverAux;
 

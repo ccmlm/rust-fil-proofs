@@ -48,10 +48,10 @@ impl<Proof: MerkleProofTrait> ColumnProof<Proof> {
         challenge: u32,
         expected_root: &<Proof::Hasher as Hasher>::Domain,
     ) -> bool {
-        let c_i = <Proof::Hasher as Hasher>::Domain::from_field(self.column_hash());
+        let c_i = self.column_hash();
 
         check_eq!(&self.inclusion_proof.root(), expected_root);
-        check!(self.inclusion_proof.validate_data(c_i));
+        check!(self.inclusion_proof.validate_data(c_i.into()));
         check!(self.inclusion_proof.validate(challenge as usize));
 
         true

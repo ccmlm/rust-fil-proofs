@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-use std::fmt::{self, Debug, Formatter};
 use std::marker::PhantomData;
 use std::panic::panic_any;
 
@@ -70,44 +68,12 @@ where
     type Value = PoseidonConstants<F, A>;
 }
 
-#[derive(Copy, Clone)]
-pub struct PoseidonDomain<F: FieldExt>(pub <F as PrimeField>::Repr);
-
-// Implement `PartialEq` by hand because `PrimeField::Repr` does not.
-impl<F: FieldExt> PartialEq for PoseidonDomain<F> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.as_ref() == other.0.as_ref()
-    }
-}
-
-// Implement `Eq` by hand because `PrimeField::Repr` does not.
-impl<F: FieldExt> Eq for PoseidonDomain<F> {}
-
-// Note: this does not compare the values of field elements; it only compares their little-endian
-// (bigint) bytes element-wise, e.g `[1u8, 3, 5]` is less than `[2]`.
-impl<F: FieldExt> Ord for PoseidonDomain<F> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.as_ref().cmp(other.0.as_ref())
-    }
-}
-
-// Note: this does not compare the values of field elements; it only compares their little-endian
-// (bigint) bytes element-wise, e.g `[1u8, 3, 5]` is less than `[2]`.
-impl<F: FieldExt> PartialOrd for PoseidonDomain<F> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.0.as_ref().cmp(other.0.as_ref()))
-    }
-}
-
-impl<F: FieldExt> Default for PoseidonDomain<F> {
-    fn default() -> Self {
-        PoseidonDomain(<F as PrimeField>::Repr::default())
-    }
-}
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
+pub struct PoseidonDomain<F: FieldExt<Repr = [u8; 32]>>(pub <F as PrimeField>::Repr);
 
 // Disallow converting between fields; also BLS12-381's scalar field `Fr` size exceeds that of the
 // Pasta curves.
-impl<F: FieldExt> From<Fr> for PoseidonDomain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> From<Fr> for PoseidonDomain<F> {
     fn from(_fr: Fr) -> Self {
         panic!("cannot convert BLS12-381 scalar to halo::PoseidonDomain")
     }
@@ -115,14 +81,13 @@ impl<F: FieldExt> From<Fr> for PoseidonDomain<F> {
 
 // Disallow converting between fields.
 #[allow(clippy::from_over_into)]
-impl<F: FieldExt> Into<Fr> for PoseidonDomain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Into<Fr> for PoseidonDomain<F> {
     fn into(self) -> Fr {
         panic!("cannot convert halo::PoseidonDomain into BLS12-381 scalar")
     }
 }
 
 // TODO (jake): decide if this is needed?
-/*
 impl From<Fp> for PoseidonDomain<Fp> {
     fn from(fp: Fp) -> Self {
         PoseidonDomain(fp.to_repr())
@@ -134,55 +99,60 @@ impl From<Fq> for PoseidonDomain<Fq> {
         PoseidonDomain(fq.to_repr())
     }
 }
-*/
 
-impl<F: FieldExt> From<[u8; 32]> for PoseidonDomain<F> {
+impl Into<Fp> for PoseidonDomain<Fp> {
+    fn into(self) -> Fp {
+        Fp::from_repr_vartime(self.0).expect("from_repr failure")
+    }
+}
+
+impl Into<Fq> for PoseidonDomain<Fq> {
+    fn into(self) -> Fq {
+        Fq::from_repr_vartime(self.0).expect("from_repr failure")
+    }
+}
+
+impl<F: FieldExt<Repr = [u8; 32]>> From<[u8; 32]> for PoseidonDomain<F> {
     fn from(bytes: [u8; 32]) -> Self {
         let mut repr = <F as PrimeField>::Repr::default();
-        // Panics if `F::Repr` is not 32 bytes (which should always be the case).
         repr.as_mut().copy_from_slice(&bytes);
         PoseidonDomain(repr)
     }
 }
 
-impl<F: FieldExt> AsRef<Self> for PoseidonDomain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> AsRef<Self> for PoseidonDomain<F> {
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl<F: FieldExt> AsRef<[u8]> for PoseidonDomain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> AsRef<[u8]> for PoseidonDomain<F> {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
     }
 }
 
-// Implement `Debug` by hand because `PrimeField::Repr` does not.
-impl<F: FieldExt> Debug for PoseidonDomain<F> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "halo::PoseidonDomain({:?})", self.0.as_ref())
-    }
-}
-
-// Implement `Serialize` by hand because `PrimeField::Repr` does not.
-impl<F: FieldExt> Serialize for PoseidonDomain<F> {
+// Implement `Serialize` by hand because `F: FieldExt` does not.
+impl<F: FieldExt<Repr = [u8; 32]>> Serialize for PoseidonDomain<F> {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         let mut le_bytes = [0u8; 32];
-        // Panics if `F::Repr` is not 32 bytes (which should always be the case).
         le_bytes.copy_from_slice(self.0.as_ref());
         le_bytes.serialize(s)
     }
 }
 
-// Implement `Deserialize` by hand because `PrimeField::Repr` does not.
-impl<'de, F: FieldExt> Deserialize<'de> for PoseidonDomain<F> {
+// Implement `Deserialize` by hand because `F: FieldExt` does not.
+impl<'de, F: FieldExt<Repr = [u8; 32]>> Deserialize<'de> for PoseidonDomain<F> {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let le_bytes = <[u8; 32]>::deserialize(d)?;
         Ok(PoseidonDomain::from(le_bytes))
     }
 }
 
-impl<F: FieldExt> Element for PoseidonDomain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Element for PoseidonDomain<F>
+where
+    Self: From<F> + Into<F>,
+{
     fn byte_len() -> usize {
         32
     }
@@ -199,13 +169,16 @@ impl<F: FieldExt> Element for PoseidonDomain<F> {
     }
 }
 
-impl<F: FieldExt> std::hash::Hash for PoseidonDomain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> std::hash::Hash for PoseidonDomain<F> {
     fn hash<H: std::hash::Hasher>(&self, hasher: &mut H) {
         std::hash::Hash::hash(self.0.as_ref(), hasher);
     }
 }
 
-impl<F: FieldExt> Domain for PoseidonDomain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Domain for PoseidonDomain<F>
+where
+    Self: From<F> + Into<F>,
+{
     type Field = F;
 
     fn into_bytes(&self) -> Vec<u8> {
@@ -231,22 +204,22 @@ impl<F: FieldExt> Domain for PoseidonDomain<F> {
     }
 }
 
+// TODO (jake): remove
 #[inline]
-fn scalar_from_slice<F: FieldExt>(bytes: &[u8]) -> F {
+fn scalar_from_slice<F: FieldExt<Repr = [u8; 32]>>(bytes: &[u8]) -> F {
     let mut repr = <F as PrimeField>::Repr::default();
-    // Panics if `bytes` is not 32 bytes.
     repr.as_mut().copy_from_slice(bytes);
     F::from_repr_vartime(repr).expect("from_repr failure")
 }
 
-fn shared_hash<F: FieldExt>(data: &[u8]) -> PoseidonDomain<F> {
+fn shared_hash<F: FieldExt<Repr = [u8; 32]>>(data: &[u8]) -> PoseidonDomain<F> {
     // FIXME: We shouldn't unwrap here, but doing otherwise will require an interface change.
     // We could truncate so `bytes_into_frs` cannot fail, then ensure `data` is always `fr_safe`.
     let preimage: Vec<F> = data.chunks(32).map(scalar_from_slice).collect();
     PoseidonDomain(shared_hash_frs(&preimage).to_repr())
 }
 
-fn shared_hash_frs<F: FieldExt>(preimage: &[F]) -> F {
+fn shared_hash_frs<F: FieldExt<Repr = [u8; 32]>>(preimage: &[F]) -> F {
     match preimage.len() {
         2 => {
             let consts = &POSEIDON_CONSTANTS
@@ -271,9 +244,9 @@ fn shared_hash_frs<F: FieldExt>(preimage: &[F]) -> F {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
-pub struct PoseidonFunction<F: FieldExt>(F);
+pub struct PoseidonFunction<F: FieldExt<Repr = [u8; 32]>>(F);
 
-impl<F: FieldExt> std::hash::Hasher for PoseidonFunction<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> std::hash::Hasher for PoseidonFunction<F> {
     fn write(&mut self, preimage: &[u8]) {
         self.0 = F::from_repr_vartime(shared_hash::<F>(preimage).0).expect("from_repr failure");
     }
@@ -299,14 +272,17 @@ impl Hashable<PoseidonFunction<Fq>> for Fq {
     }
 }
 
-impl<F: FieldExt> Hashable<PoseidonFunction<F>> for PoseidonDomain<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Hashable<PoseidonFunction<F>> for PoseidonDomain<F> {
     fn hash(&self, hasher: &mut PoseidonFunction<F>) {
         use std::hash::Hasher;
         hasher.write(self.0.as_ref());
     }
 }
 
-impl<F: FieldExt> Algorithm<PoseidonDomain<F>> for PoseidonFunction<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Algorithm<PoseidonDomain<F>> for PoseidonFunction<F>
+where
+    PoseidonDomain<F>: Domain,
+{
     fn hash(&mut self) -> PoseidonDomain<F> {
         PoseidonDomain::from_slice(self.0.to_repr().as_ref())
     }
@@ -348,7 +324,10 @@ impl<F: FieldExt> Algorithm<PoseidonDomain<F>> for PoseidonFunction<F> {
     }
 }
 
-impl<F: FieldExt> HashFunction<PoseidonDomain<F>> for PoseidonFunction<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> HashFunction<PoseidonDomain<F>> for PoseidonFunction<F>
+where
+    PoseidonDomain<F>: Domain,
+{
     fn hash(preimage: &[u8]) -> PoseidonDomain<F> {
         shared_hash(preimage)
     }
@@ -450,11 +429,14 @@ impl<F: FieldExt> HashFunction<PoseidonDomain<F>> for PoseidonFunction<F> {
 }
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PoseidonHasher<F: FieldExt> {
+pub struct PoseidonHasher<F: FieldExt<Repr = [u8; 32]>> {
     _f: PhantomData<F>,
 }
 
-impl<F: FieldExt> Hasher for PoseidonHasher<F> {
+impl<F: FieldExt<Repr = [u8; 32]>> Hasher for PoseidonHasher<F>
+where
+    PoseidonDomain<F>: Domain,
+{
     type Domain = PoseidonDomain<F>;
     type Function = PoseidonFunction<F>;
 

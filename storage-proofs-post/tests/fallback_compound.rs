@@ -2,6 +2,7 @@ use bellperson::{
     util_cs::{metric_cs::MetricCS, test_cs::TestConstraintSystem},
     Circuit,
 };
+use blstrs::Scalar as Fr;
 use filecoin_hashers::{poseidon::PoseidonHasher, Domain, HashFunction, Hasher};
 use generic_array::typenum::{U0, U2, U4, U8};
 use pretty_assertions::assert_eq;
@@ -69,6 +70,7 @@ fn fallback_post<Tree: 'static + MerkleTreeTrait>(
     api_version: ApiVersion,
 ) where
     Tree::Store: 'static,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
 {
     let rng = &mut XorShiftRng::from_seed(TEST_SEED);
 

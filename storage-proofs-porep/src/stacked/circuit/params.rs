@@ -5,7 +5,7 @@ use bellperson::{
     ConstraintSystem, SynthesisError,
 };
 use blstrs::Scalar as Fr;
-use filecoin_hashers::{Hasher, PoseidonArity};
+use filecoin_hashers::{Domain, Hasher, PoseidonArity};
 use generic_array::typenum::{U0, U2};
 use storage_proofs_core::{
     drgraph::Graph,
@@ -38,7 +38,11 @@ type TreeColumnProof<T> = ColumnProof<
 
 /// Proof for a single challenge.
 #[derive(Debug)]
-pub struct Proof<Tree: MerkleTreeTrait, G: Hasher> {
+pub struct Proof<Tree: MerkleTreeTrait, G: Hasher>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
+{
     /// Inclusion path for the challenged data node in tree D.
     pub comm_d_path: AuthPath<G, U2, U0, U0>,
     /// The value of the challenged data node.
@@ -60,7 +64,11 @@ pub struct Proof<Tree: MerkleTreeTrait, G: Hasher> {
 // #[derive(Clone)]) because derive(Clone) will only expand for MerkleTreeTrait types that also
 // implement Clone. Not every MerkleTreeTrait type is Clone-able because not all merkel Store's are
 // Clone-able, therefore deriving Clone would impl Clone for less than all possible Tree types.
-impl<Tree: MerkleTreeTrait, G: 'static + Hasher> Clone for Proof<Tree, G> {
+impl<Tree: MerkleTreeTrait, G: 'static + Hasher> Clone for Proof<Tree, G>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
+{
     fn clone(&self) -> Self {
         Proof {
             comm_d_path: self.comm_d_path.clone(),
@@ -75,7 +83,11 @@ impl<Tree: MerkleTreeTrait, G: 'static + Hasher> Clone for Proof<Tree, G> {
     }
 }
 
-impl<Tree: MerkleTreeTrait, G: 'static + Hasher> Proof<Tree, G> {
+impl<Tree: MerkleTreeTrait, G: 'static + Hasher> Proof<Tree, G>
+where
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
+{
     /// Create an empty proof, used in `blank_circuit`s.
     pub fn empty(params: &PublicParams<Tree>) -> Self {
         Proof {
@@ -281,6 +293,8 @@ impl<Tree: MerkleTreeTrait, G: 'static + Hasher> Proof<Tree, G> {
 impl<Tree: MerkleTreeTrait, G: Hasher> From<VanillaProof<Tree, G>> for Proof<Tree, G>
 where
     Tree::Hasher: 'static,
+    <Tree::Hasher as Hasher>::Domain: Domain<Field = Fr>,
+    G::Domain: Domain<Field = Fr>,
 {
     fn from(vanilla_proof: VanillaProof<Tree, G>) -> Self {
         let VanillaProof {
@@ -320,6 +334,7 @@ fn enforce_inclusion<H, U, V, W, CS: ConstraintSystem<Fr>>(
 ) -> Result<(), SynthesisError>
 where
     H: 'static + Hasher,
+    H::Domain: Domain<Field = Fr>,
     U: 'static + PoseidonArity,
     V: 'static + PoseidonArity,
     W: 'static + PoseidonArity,
